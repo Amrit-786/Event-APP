@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="popin.">
+  <rect width="64" height="64" rx="14" fill="#F2FFFB"/>
+  <path d="M10 18c0-3.3 2.7-6 6-6h20c3.3 0 6 2.7 6 6v4H10v-4z" fill="#0B3D3A"/>
+  <rect x="10" y="22" width="32" height="28" rx="4" fill="#0B3D3A"/>
+  <g fill="#B8F0E8">
+    <rect x="16" y="28" width="6" height="6" rx="1.2"/>
+    <rect x="25" y="28" width="6" height="6" rx="1.2"/>
+    <rect x="34" y="28" width="6" height="6" rx="1.2"/>
+    <rect x="16" y="37" width="6" height="6" rx="1.2"/>
+    <rect x="25" y="37" width="6" height="6" rx="1.2"/>
+    <rect x="34" y="37" width="6" height="6" rx="1.2"/>
+  </g>
+  <g transform="translate(30 34) rotate(-18)">
+    <path d="M0 4c0-2.2 1.8-4 4-4h18c2.2 0 4 1.8 4 4v14c0 2.2-1.8 4-4 4H4c-2.2 0-4-1.8-4-4V4z" fill="#00A89E"/>
+    <path d="M18 0v22" stroke="#F2FFFB" stroke-width="1.6" stroke-dasharray="2.2 2.2"/>
+    <path d="M9.2 11.2l1.5 1.5 3.6-3.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <path d="M44 10l2.2 3.4 3.8.7-2.7 2.9.5 3.8-3.8-1.8-3.8 1.8.5-3.8-2.7-2.9 3.8-.7z" fill="#00A89E" transform="translate(2 -2) scale(0.55)"/>
+</svg>

@@ -1,24 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
-const { 
-  createEvent, 
-  getEvents, 
-  getEvent, 
-  updateEvent, 
-  deleteEvent, 
+const { protect, adminOnly } = require('../middleware/auth');
+const {
+  createEvent,
+  getEvents,
+  getEvent,
+  updateEvent,
+  deleteEvent,
   registerForEvent,
-  searchEvents
+  cancelRegistration,
+  searchEvents,
 } = require('../controllers/eventController');
 
-router.post('/', protect, createEvent);
+router.post('/', protect, adminOnly, createEvent);
+router.get('/search', searchEvents);
 router.get('/', getEvents);
 router.get('/:id', getEvent);
-router.put('/:id', protect, updateEvent);
-router.delete('/:id', protect, deleteEvent);
+router.put('/:id', protect, adminOnly, updateEvent);
+router.delete('/:id', protect, adminOnly, deleteEvent);
 router.post('/:id/register', protect, registerForEvent);
-router.get('/search', searchEvents);
-router.get('/search', searchEvents);
-
+router.delete('/:id/register', protect, cancelRegistration);
 
 module.exports = router;

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 84" role="img" aria-label="popin.">
+  <!-- mark -->
+  <g transform="translate(0 6)">
+    <path d="M8 16c0-3.3 2.7-6 6-6h28c3.3 0 6 2.7 6 6v5H8v-5z" fill="#0B3D3A"/>
+    <rect x="8" y="21" width="40" height="34" rx="5" fill="#0B3D3A"/>
+    <g fill="#B8F0E8">
+      <rect x="15" y="29" width="7" height="7" rx="1.4"/>
+      <rect x="26" y="29" width="7" height="7" rx="1.4"/>
+      <rect x="37" y="29" width="7" height="7" rx="1.4"/>
+      <rect x="15" y="40" width="7" height="7" rx="1.4"/>
+      <rect x="26" y="40" width="7" height="7" rx="1.4"/>
+      <rect x="37" y="40" width="7" height="7" rx="1.4"/>
+    </g>
+    <g transform="translate(34 38) rotate(-18)">
+      <path d="M0 4c0-2.4 1.9-4.4 4.4-4.4h22c2.4 0 4.4 2 4.4 4.4v16c0 2.4-2 4.4-4.4 4.4h-22C1.9 24.4 0 22.4 0 20V4z" fill="#00A89E"/>
+      <path d="M21 0v24.4" stroke="#F2FFFB" stroke-width="1.8" stroke-dasharray="2.4 2.4"/>
+      <path d="M10.5 12.4l1.8 1.8 4.2-4.4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g fill="#00A89E">
+      <path d="M52 8l1.2 2.1h2.4l-1.9 1.5.7 2.3L52 12.6l-2.4 1.3.7-2.3-1.9-1.5h2.4z"/>
+      <path d="M60 12l1 1.7h2l-1.6 1.2.6 1.9-2-1.1-2 1.1.6-1.9-1.6-1.2h2z"/>
+      <path d="M56 3l.9 1.5h1.8l-1.4 1.1.5 1.7-1.8-1-1.8 1 .5-1.7-1.4-1.1h1.8z"/>
+    </g>
+  </g>
+  <!-- wordmark -->
+  <text
+    x="88"
+    y="56"
+    font-family="Outfit, Arial Rounded MT Bold, Arial, sans-serif"
+    font-size="48"
+    font-weight="700"
+    fill="#0B3D3A"
+    letter-spacing="-1.2"
+  >pop<tspan fill="#00A89E">i</tspan>n<tspan fill="#00A89E">.</tspan></text>
+  <g fill="#00A89E" transform="translate(148 10)">
+    <path d="M0 8l1.4 2.3h2.6l-2.1 1.6.8 2.5L0 13.2l-2.7 1.2.8-2.5-2.1-1.6h2.6z"/>
+    <path d="M10 2l1.1 1.8h2.1l-1.7 1.3.6 2-2.1-1.1-2.1 1.1.6-2-1.7-1.3h2.1z"/>
+    <path d="M18 9l1 1.6h1.9l-1.5 1.2.6 1.8-2-1-2 1 .6-1.8-1.5-1.2h1.9z"/>
+  </g>
+</svg>

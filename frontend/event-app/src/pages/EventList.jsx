@@ -1,37 +1,69 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Container, Heading, SimpleGrid, Input, Select, Button, Text, VStack, HStack, Badge, useColorModeValue } from '@chakra-ui/react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Box,
+  Container,
+  Heading,
+  SimpleGrid,
+  Input,
+  Select,
+  Button,
+  Text,
+  VStack,
+  HStack,
+  Stack,
+  Badge,
+  Spinner,
+  useColorModeValue,
+} from '@chakra-ui/react';
 import { Link as RouterLink } from 'react-router-dom';
-
-
-const fetchEvents = () => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        { id: 1, title: 'Tech Conference 2024', date: '2024-09-15', category: 'Technology', attendees: 500 },
-        { id: 2, title: 'Music Festival', date: '2024-07-22', category: 'Music', attendees: 10000 },
-        { id: 3, title: 'Food & Wine Expo', date: '2024-08-05', category: 'Food', attendees: 2000 },
-        { id: 4, title: 'Startup Pitch Night', date: '2024-10-10', category: 'Business', attendees: 200 },
-        { id: 5, title: 'Art Gallery Opening', date: '2024-11-01', category: 'Art', attendees: 300 },
-      ]);
-    }, 1000);
-  });
-};
+import api from '../api/client';
+import { formatEventDate } from '../utils/auth';
 
 const EventCard = ({ event }) => {
-  const cardBg = useColorModeValue('white', 'gray.700');
-  const textColor = useColorModeValue('gray.600', 'gray.200');
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const textColor = useColorModeValue('gray.600', 'gray.300');
+  const border = useColorModeValue('blackAlpha.100', 'whiteAlpha.200');
+  const attendees = event.participants?.length ?? 0;
 
   return (
-    <Box p={5} shadow="md" borderWidth="1px" borderRadius="lg" bg={cardBg}>
-      <Heading fontSize="xl" mb={2}>{event.title}</Heading>
-      <Text color={textColor} mb={2}>Date: {event.date}</Text>
-      <HStack>
-        <Badge colorScheme="blue">{event.category}</Badge>
-        <Badge colorScheme="green">{event.attendees} attendees</Badge>
+    <Box
+      p={{ base: 4, md: 5 }}
+      borderWidth="1px"
+      borderColor={border}
+      borderRadius="lg"
+      bg={cardBg}
+      h="100%"
+      display="flex"
+      flexDirection="column"
+      style={{ contain: 'content' }}
+      transition="transform 0.2s ease, box-shadow 0.2s ease"
+      _hover={{ transform: 'translateY(-2px)', boxShadow: 'md' }}
+    >
+      <Heading fontSize={{ base: 'lg', md: 'xl' }} mb={2} noOfLines={2}>
+        {event.name}
+      </Heading>
+      <Text color={textColor} mb={3} fontSize="sm">
+        {formatEventDate(event.date)}
+        {event.location ? ` · ${event.location}` : ''}
+      </Text>
+      <HStack flexWrap="wrap" spacing={2} mb={4}>
+        <Badge bg="brand.500" color="white">{event.category}</Badge>
+        <Badge colorScheme="green">
+          {attendees}/{event.maxParticipants}
+        </Badge>
       </HStack>
-      <Button as={RouterLink} to={`/events/${event.id}`} mt={4} colorScheme="blue" size="sm">
-        View Details
-      </Button>
+      <Button
+        as={RouterLink}
+        to={`/events/${event._id}`}
+        mt="auto"
+                bg="brand.500"
+                color="white"
+                _hover={{ bg: 'brand.600' }}
+                size="md"
+                w="100%"
+              >
+                View Details
+              </Button>
     </Box>
   );
 };
@@ -40,57 +72,166 @@ const EventList = () => {
   const [events, setEvents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const debounceRef = useRef(null);
+  const pageBg = useColorModeValue('gray.50', 'gray.900');
+  const filterBg = useColorModeValue('white', 'gray.800');
+  const border = useColorModeValue('blackAlpha.100', 'whiteAlpha.200');
+
+  const loadEvents = async (filters) => {
+    setLoading(true);
+    setError('');
+    try {
+      const hasFilters =
+        filters.name || filters.category || filters.startDate || filters.endDate;
+
+      if (hasFilters) {
+        const { data } = await api.get('/events/search', {
+          params: {
+            name: filters.name || undefined,
+            category: filters.category || undefined,
+            startDate: filters.startDate || undefined,
+            endDate: filters.endDate || undefined,
+            limit: 50,
+          },
+        });
+        setEvents(data.events || []);
+      } else {
+        const { data } = await api.get('/events');
+        setEvents(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load events.');
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetchEvents().then(data => {
-      setEvents(data);
-      setLoading(false);
-    });
-  }, []);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      loadEvents({
+        name: searchTerm.trim(),
+        category: categoryFilter,
+        startDate,
+        endDate,
+      });
+    }, 250);
 
-  const filteredEvents = events.filter(event => 
-    event.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (categoryFilter === '' || event.category === categoryFilter)
-  );
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchTerm, categoryFilter, startDate, endDate]);
+
+  const setUpcomingOnly = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    setStartDate(today);
+    setEndDate('');
+  };
 
   return (
-    <Box minH="100vh" py={10}>
+    <Box bg={pageBg} minH="100%" py={{ base: 6, md: 10 }}>
       <Container maxW="container.xl">
-        <VStack spacing={8} align="stretch">
-          <Heading as="h1" size="2xl" textAlign="center" mb={6}>
+        <VStack spacing={{ base: 5, md: 8 }} align="stretch">
+          <Heading
+            as="h1"
+            fontSize={{ base: '2xl', md: '4xl' }}
+            textAlign={{ base: 'left', md: 'center' }}
+          >
             Upcoming Events
           </Heading>
 
-          <HStack spacing={4}>
-            <Input
-              placeholder="Search events..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Select
-              placeholder="All Categories"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="Technology">Technology</option>
-              <option value="Music">Music</option>
-              <option value="Food">Food</option>
-              <option value="Business">Business</option>
-              <option value="Art">Art</option>
-            </Select>
-          </HStack>
+          <Box
+            bg={filterBg}
+            borderWidth="1px"
+            borderColor={border}
+            borderRadius="lg"
+            p={{ base: 4, md: 5 }}
+          >
+            <VStack spacing={3} align="stretch">
+              <Stack direction={{ base: 'column', md: 'row' }} spacing={3}>
+                <Input
+                  placeholder="Search by name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  size="md"
+                  bg={pageBg}
+                />
+                <Select
+                  placeholder="All Categories"
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  maxW={{ md: '220px' }}
+                  bg={pageBg}
+                >
+                  <option value="Technology">Technology</option>
+                  <option value="Music">Music</option>
+                  <option value="Food">Food</option>
+                  <option value="Business">Business</option>
+                  <option value="Art">Art</option>
+                </Select>
+              </Stack>
+
+              <Stack direction={{ base: 'column', sm: 'row' }} spacing={3}>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  aria-label="Start date"
+                  bg={pageBg}
+                />
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  aria-label="End date"
+                  bg={pageBg}
+                />
+              </Stack>
+
+              <Stack direction={{ base: 'column', sm: 'row' }} spacing={3}>
+                <Button onClick={setUpcomingOnly} variant="outline" w={{ base: '100%', sm: 'auto' }}>
+                  Upcoming
+                </Button>
+                <Button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setCategoryFilter('');
+                    setStartDate('');
+                    setEndDate('');
+                  }}
+                  variant="ghost"
+                  w={{ base: '100%', sm: 'auto' }}
+                >
+                  Clear filters
+                </Button>
+              </Stack>
+            </VStack>
+          </Box>
 
           {loading ? (
-            <Text textAlign="center">Loading events...</Text>
-          ) : filteredEvents.length > 0 ? (
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={10}>
-              {filteredEvents.map(event => (
-                <EventCard key={event.id} event={event} />
+            <HStack justify="center" py={10}>
+              <Spinner color="teal.500" />
+              <Text>Loading events...</Text>
+            </HStack>
+          ) : error ? (
+            <Text textAlign="center" color="red.400">
+              {error}
+            </Text>
+          ) : events.length > 0 ? (
+            <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} spacing={{ base: 4, md: 6 }}>
+              {events.map((event) => (
+                <EventCard key={event._id} event={event} />
               ))}
             </SimpleGrid>
           ) : (
-            <Text textAlign="center">No events found matching your criteria.</Text>
+            <Text textAlign="center" color="gray.500" py={8}>
+              No events found matching your criteria.
+            </Text>
           )}
         </VStack>
       </Container>
