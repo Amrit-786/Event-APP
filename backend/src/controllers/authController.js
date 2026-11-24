@@ -20,7 +20,7 @@ function signToken(userId) {
 
 function formatUser(user) {
   return {
-    id: user._id,
+    id: user._id || user.id,
     name: user.username,
     email: user.email,
     role: user.role,
@@ -42,12 +42,16 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: 'Name, email, and password are required' });
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findByEmail(email);
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists' });
     }
 
-    const user = await User.create({ username: name, email, password });
+    const user = await User.createUser({
+      username: name,
+      email,
+      password,
+    });
 
     res.status(201).json({
       token: signToken(user._id),
@@ -63,7 +67,7 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findByEmail(email);
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -74,7 +78,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    const isPasswordValid = await user.matchPassword(password);
+    const isPasswordValid = await User.matchPassword(user, password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -113,15 +117,14 @@ exports.googleAuth = async (req, res) => {
       return res.status(400).json({ error: 'Google account email is required' });
     }
 
-    let user = await User.findOne({ $or: [{ googleId }, { email }] });
+    let user = await User.findByGoogleIdOrEmail(googleId, email);
 
     if (user) {
       if (!user.googleId) {
-        user.googleId = googleId;
-        await user.save();
+        user = await User.updateUser(user._id, { googleId });
       }
     } else {
-      user = await User.create({
+      user = await User.createUser({
         username: uniqueUsernameFromEmail(email, name),
         email,
         googleId,
@@ -149,23 +152,27 @@ exports.forgotPassword = async (req, res) => {
       return res.json(generic);
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findByEmail(email);
     if (!user) {
       return res.json(generic);
     }
 
     const resetToken = crypto.randomBytes(32).toString('hex');
-    user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
-    await user.save();
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    await User.updateUser(user._id, {
+      passwordResetToken: hashedToken,
+      passwordResetExpires: new Date(Date.now() + 15 * 60 * 1000),
+    });
 
     try {
       await sendPasswordResetEmail(user.email, resetToken);
     } catch (mailError) {
       console.error(mailError);
-      user.passwordResetToken = undefined;
-      user.passwordResetExpires = undefined;
-      await user.save();
+      await User.updateUser(user._id, {
+        passwordResetToken: null,
+        passwordResetExpires: null,
+      });
       return res.status(500).json({ error: 'Could not send reset email. Try again later.' });
     }
 
@@ -187,23 +194,21 @@ exports.resetPassword = async (req, res) => {
     }
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const user = await User.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpires: { $gt: Date.now() },
-    });
+    const user = await User.findByResetToken(hashedToken);
 
     if (!user) {
       return res.status(400).json({ error: 'Reset link is invalid or has expired' });
     }
 
-    user.password = password;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    await user.save();
+    const updated = await User.updateUser(user._id, {
+      password,
+      passwordResetToken: null,
+      passwordResetExpires: null,
+    });
 
     res.json({
-      token: signToken(user._id),
-      user: formatUser(user),
+      token: signToken(updated._id),
+      user: formatUser(updated),
     });
   } catch (error) {
     console.error(error);

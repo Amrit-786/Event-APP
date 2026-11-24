@@ -17,8 +17,8 @@ This document explains **how the product works**, **who can do what**, and **wha
 Stack:
 
 - **Frontend:** React (Vite) + Chakra UI + React Router + Axios  
-- **Backend:** Node.js + Express + JWT + MongoDB (Mongoose)  
-- **Deploy targets:** Frontend → Vercel · Backend → Render · DB → MongoDB Atlas (or local Mongo)
+- **Backend:** Node.js + Express + JWT + Supabase (Postgres)  
+- **Deploy targets:** Frontend → Vercel · Backend → Render · DB → Supabase
 
 ---
 
@@ -33,8 +33,8 @@ Stack:
                                                                   │
                                                                   ▼
                                                          ┌─────────────────┐
-                                                         │    MongoDB      │
-                                                         │  Users, Events  │
+                                                         │    Supabase     │
+                                                         │  Users, Events │
                                                          └─────────────────┘
 ```
 
@@ -189,7 +189,7 @@ Backend middleware:
 | Need | Why |
 |------|-----|
 | Node.js 18+ | Run frontend + backend |
-| MongoDB running | Persist users & events (`MONGODB_URI` in backend `.env`) |
+| Supabase project | Persist users & events (`SUPABASE_URL` + service role key) |
 | Backend `.env` | See `backend/.env.example` |
 | Seed admin | `cd backend && npm run seed:admin` |
 | Two terminals | `npm run dev` in `backend` and in `frontend/event-app` |
@@ -197,7 +197,8 @@ Backend middleware:
 **Minimum backend env**
 
 ```
-MONGODB_URI=...
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=...
 JWT_SECRET=...
 PORT=5000
 FRONTEND_URL=http://localhost:5173
@@ -216,7 +217,7 @@ VITE_API_URL=http://localhost:5000/api
 
 | Need | Purpose |
 |------|---------|
-| MongoDB Atlas (or hosted Mongo) | Production database |
+| Supabase project (schema applied) | Production database |
 | Render (or similar) Web Service | Host Express API |
 | Vercel project | Host Vite SPA |
 | Strong `JWT_SECRET` | Secure tokens |
@@ -276,4 +277,4 @@ npm run dev
 
 ## 10. Mental model (one sentence)
 
-**Admins publish events into MongoDB; anyone can discover them; logged-in users join or leave; the frontend never trusts itself for permissions — the API enforces JWT + admin role.**
+**Admins publish events into Supabase Postgres; anyone can discover them; logged-in users join or leave; the frontend never trusts itself for permissions — the API enforces JWT + admin role.**

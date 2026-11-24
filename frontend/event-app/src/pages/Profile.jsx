@@ -16,7 +16,7 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import api from '../api/client';
-import { getStoredUser, formatEventDate } from '../utils/auth';
+import { getStoredUser, formatEventDate, isEventClosed } from '../utils/auth';
 
 const Profile = () => {
   const user = getStoredUser();
@@ -77,9 +77,8 @@ const Profile = () => {
     }
   };
 
-  const now = new Date();
-  const upcoming = events.filter((e) => new Date(e.date) >= now);
-  const past = events.filter((e) => new Date(e.date) < now);
+  const upcoming = events.filter((e) => !isEventClosed(e.date, e.time));
+  const past = events.filter((e) => isEventClosed(e.date, e.time));
 
   const EventRow = ({ event, showCancel }) => (
     <Stack

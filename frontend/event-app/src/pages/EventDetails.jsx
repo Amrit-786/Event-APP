@@ -15,7 +15,7 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import api from '../api/client';
-import { getStoredUser, isAdminUser, formatEventDate } from '../utils/auth';
+import { getStoredUser, isAdminUser, formatEventDate, isEventClosed } from '../utils/auth';
 
 const EventDetails = () => {
   const { id } = useParams();
@@ -60,6 +60,16 @@ const EventDetails = () => {
   const handleRegister = async () => {
     if (!isAuthenticated) {
       navigate('/auth');
+      return;
+    }
+    if (isEventClosed(event?.date, event?.time)) {
+      toast({
+        title: 'Registration closed',
+        description: 'This event has ended. Registration is no longer available.',
+        status: 'info',
+        duration: 4000,
+        isClosable: true,
+      });
       return;
     }
     setActionLoading(true);
@@ -156,6 +166,7 @@ const EventDetails = () => {
   }
 
   const attendees = event.participants?.length ?? 0;
+  const closed = isEventClosed(event.date, event.time);
 
   return (
     <Box bg={bgColor} minH="100%" py={{ base: 6, md: 10 }}>
@@ -180,7 +191,18 @@ const EventDetails = () => {
             <Badge colorScheme="purple" fontSize="sm" px={2} py={1}>
               {event.status}
             </Badge>
+            {closed && (
+              <Badge colorScheme="red" fontSize="sm" px={2} py={1}>
+                Closed
+              </Badge>
+            )}
           </HStack>
+
+          {closed && (
+            <Text fontSize="sm" color="red.500" fontWeight="medium">
+              This event has ended. Registration is closed.
+            </Text>
+          )}
 
           <VStack
             align="stretch"
@@ -215,7 +237,15 @@ const EventDetails = () => {
           </Box>
 
           <Stack direction={{ base: 'column', sm: 'row' }} spacing={3} pt={2}>
-            {isRegistered ? (
+            {closed ? (
+              <Button
+                size="lg"
+                isDisabled
+                w={{ base: '100%', sm: 'auto' }}
+              >
+                Registration Closed
+              </Button>
+            ) : isRegistered ? (
               <Button
                 colorScheme="orange"
                 size="lg"

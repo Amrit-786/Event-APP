@@ -1,5 +1,5 @@
-require('dotenv').config();
-const mongoose = require('mongoose');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const User = require('../models/User');
 
 async function seedAdmin() {
@@ -12,23 +12,22 @@ async function seedAdmin() {
     process.exit(1);
   }
 
-  if (!process.env.MONGODB_URI) {
-    console.error('Set MONGODB_URI in .env before seeding.');
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env before seeding.');
     process.exit(1);
   }
 
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-
-    let user = await User.findOne({ email });
+    let user = await User.findByEmail(email);
     if (user) {
-      user.username = username;
-      user.password = password;
-      user.role = 'admin';
-      await user.save();
+      await User.updateUser(user._id, {
+        username,
+        password,
+        role: 'admin',
+      });
       console.log(`Updated existing user to admin: ${email}`);
     } else {
-      user = await User.create({
+      await User.createUser({
         username,
         email,
         password,
@@ -36,8 +35,6 @@ async function seedAdmin() {
       });
       console.log(`Created admin user: ${email}`);
     }
-
-    await mongoose.disconnect();
     process.exit(0);
   } catch (error) {
     console.error('Failed to seed admin:', error.message);

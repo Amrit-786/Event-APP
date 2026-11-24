@@ -17,13 +17,14 @@ import {
 } from '@chakra-ui/react';
 import { Link as RouterLink } from 'react-router-dom';
 import api from '../api/client';
-import { formatEventDate } from '../utils/auth';
+import { formatEventDate, isEventClosed } from '../utils/auth';
 
 const EventCard = ({ event }) => {
   const cardBg = useColorModeValue('white', 'gray.800');
   const textColor = useColorModeValue('gray.600', 'gray.300');
   const border = useColorModeValue('blackAlpha.100', 'whiteAlpha.200');
   const attendees = event.participants?.length ?? 0;
+  const closed = isEventClosed(event.date, event.time);
 
   return (
     <Box
@@ -35,13 +36,21 @@ const EventCard = ({ event }) => {
       h="100%"
       display="flex"
       flexDirection="column"
+      opacity={closed ? 0.88 : 1}
       style={{ contain: 'content' }}
       transition="transform 0.2s ease, box-shadow 0.2s ease"
       _hover={{ transform: 'translateY(-2px)', boxShadow: 'md' }}
     >
-      <Heading fontSize={{ base: 'lg', md: 'xl' }} mb={2} noOfLines={2}>
-        {event.name}
-      </Heading>
+      <HStack justify="space-between" align="flex-start" mb={2} spacing={2}>
+        <Heading fontSize={{ base: 'lg', md: 'xl' }} noOfLines={2}>
+          {event.name}
+        </Heading>
+        {closed && (
+          <Badge colorScheme="gray" flexShrink={0}>
+            Closed
+          </Badge>
+        )}
+      </HStack>
       <Text color={textColor} mb={3} fontSize="sm">
         {formatEventDate(event.date)}
         {event.location ? ` · ${event.location}` : ''}
@@ -51,19 +60,24 @@ const EventCard = ({ event }) => {
         <Badge colorScheme="green">
           {attendees}/{event.maxParticipants}
         </Badge>
+        {closed && (
+          <Badge colorScheme="red" variant="subtle">
+            Registration closed
+          </Badge>
+        )}
       </HStack>
       <Button
         as={RouterLink}
         to={`/events/${event._id}`}
         mt="auto"
-                bg="brand.500"
-                color="white"
-                _hover={{ bg: 'brand.600' }}
-                size="md"
-                w="100%"
-              >
-                View Details
-              </Button>
+        bg="brand.500"
+        color="white"
+        _hover={{ bg: 'brand.600' }}
+        size="md"
+        w="100%"
+      >
+        View Details
+      </Button>
     </Box>
   );
 };

@@ -2,11 +2,17 @@ const Event = require('../models/Event');
 
 exports.createEvent = async (req, res) => {
   try {
-    const event = new Event({
-      ...req.body,
-      organizer: req.user._id,
+    const event = await Event.createEvent({
+      name: req.body.name,
+      description: req.body.description,
+      date: req.body.date,
+      time: req.body.time,
+      location: req.body.location,
+      organizerId: req.user._id,
+      maxParticipants: Number(req.body.maxParticipants),
+      category: req.body.category,
+      status: req.body.status,
     });
-    await event.save();
     res.status(201).json(event);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -15,9 +21,7 @@ exports.createEvent = async (req, res) => {
 
 exports.getEvents = async (req, res) => {
   try {
-    const events = await Event.find()
-      .populate('organizer', 'username')
-      .populate('participants', 'username email');
+    const events = await Event.findAll();
     res.json(events);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -26,9 +30,7 @@ exports.getEvents = async (req, res) => {
 
 exports.getEvent = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id)
-      .populate('organizer', 'username')
-      .populate('participants', 'username email');
+    const event = await Event.findById(req.params.id);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -40,12 +42,24 @@ exports.getEvent = async (req, res) => {
 
 exports.updateEvent = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
-    if (!event) {
+    const existing = await Event.findById(req.params.id);
+    if (!existing) {
       return res.status(404).json({ message: 'Event not found' });
     }
-    Object.assign(event, req.body);
-    await event.save();
+
+    const event = await Event.updateEvent(req.params.id, {
+      name: req.body.name,
+      description: req.body.description,
+      date: req.body.date,
+      time: req.body.time,
+      location: req.body.location,
+      maxParticipants:
+        req.body.maxParticipants !== undefined
+          ? Number(req.body.maxParticipants)
+          : undefined,
+      category: req.body.category,
+      status: req.body.status,
+    });
     res.json(event);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -54,16 +68,39 @@ exports.updateEvent = async (req, res) => {
 
 exports.deleteEvent = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
-    if (!event) {
+    const existing = await Event.findById(req.params.id);
+    if (!existing) {
       return res.status(404).json({ message: 'Event not found' });
     }
-    await event.deleteOne();
+    await Event.deleteEvent(req.params.id);
     res.json({ message: 'Event deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
+function isEventDateClosed(dateValue, timeValue) {
+  if (!dateValue) return false;
+  const startsAt = new Date(dateValue);
+  if (Number.isNaN(startsAt.getTime())) return false;
+
+  const match = String(timeValue || '')
+    .trim()
+    .match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+
+  if (match) {
+    startsAt.setHours(
+      Number(match[1]),
+      Number(match[2]),
+      Number(match[3] || 0),
+      0
+    );
+  } else {
+    startsAt.setHours(23, 59, 59, 999);
+  }
+
+  return Date.now() > startsAt.getTime();
+}
 
 exports.registerForEvent = async (req, res) => {
   try {
@@ -71,16 +108,27 @@ exports.registerForEvent = async (req, res) => {
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
-    if (event.participants.some((id) => id.toString() === req.user._id.toString())) {
+
+    if (isEventDateClosed(event.date, event.time)) {
+      return res.status(400).json({ message: 'Registration closed — this event has ended' });
+    }
+
+    const alreadyRegistered = event.participants.some(
+      (p) => (p._id || p.id || p).toString() === req.user._id.toString()
+    );
+    if (alreadyRegistered) {
       return res.status(400).json({ message: 'Already registered for this event' });
     }
     if (event.participants.length >= event.maxParticipants) {
       return res.status(400).json({ message: 'Event is full' });
     }
-    event.participants.push(req.user._id);
-    await event.save();
+
+    await Event.addParticipant(event._id, req.user._id);
     res.json({ message: 'Successfully registered for the event' });
   } catch (error) {
+    if (error.code === '23505') {
+      return res.status(400).json({ message: 'Already registered for this event' });
+    }
     res.status(400).json({ message: error.message });
   }
 };
@@ -92,16 +140,11 @@ exports.cancelRegistration = async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    const before = event.participants.length;
-    event.participants = event.participants.filter(
-      (id) => id.toString() !== req.user._id.toString()
-    );
-
-    if (event.participants.length === before) {
+    const removed = await Event.removeParticipant(event._id, req.user._id);
+    if (!removed) {
       return res.status(400).json({ message: 'You are not registered for this event' });
     }
 
-    await event.save();
     res.json({ message: 'Registration cancelled successfully' });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -121,45 +164,18 @@ exports.searchEvents = async (req, res) => {
       sortOrder = 'asc',
     } = req.query;
 
-    const query = {};
-
-    if (name) {
-      query.name = { $regex: name, $options: 'i' };
-    }
-
-    if (category) {
-      query.category = category;
-    }
-
-    if (startDate && endDate) {
-      query.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
-    } else if (startDate) {
-      query.date = { $gte: new Date(startDate) };
-    } else if (endDate) {
-      query.date = { $lte: new Date(endDate) };
-    }
-
-    const sortOptions = {};
-    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-    const options = {
-      page: parseInt(page, 10),
-      limit: parseInt(limit, 10),
-      sort: sortOptions,
-      populate: [
-        { path: 'organizer', select: 'username' },
-        { path: 'participants', select: 'username email' },
-      ],
-    };
-
-    const result = await Event.paginate(query, options);
-
-    res.json({
-      events: result.docs,
-      currentPage: result.page,
-      totalPages: result.totalPages,
-      totalEvents: result.totalDocs,
+    const result = await Event.searchEvents({
+      name,
+      category,
+      startDate,
+      endDate,
+      page: parseInt(page, 10) || 1,
+      limit: parseInt(limit, 10) || 10,
+      sortBy,
+      sortOrder,
     });
+
+    res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
