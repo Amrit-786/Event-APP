@@ -6,7 +6,7 @@ function getFrontendOrigin() {
 }
 
 async function sendPasswordResetEmail(to, token) {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = (process.env.RESEND_API_KEY || '').trim();
   if (!apiKey) {
     console.warn('RESEND_API_KEY is not set; password reset email was not sent.');
     console.warn(`Reset link for ${to}: ${getFrontendOrigin()}/reset-password?token=${token}`);

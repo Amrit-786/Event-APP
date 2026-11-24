@@ -46,6 +46,22 @@ const Auth = ({ onLogin }) => {
     navigate(data.user?.role === 'admin' ? '/create-event' : '/events');
   };
 
+  const handleForgotPassword = (e) => {
+    e.preventDefault();
+    const trimmed = email.trim();
+    if (!trimmed) {
+      toast({
+        title: 'Email required',
+        description: 'Enter your email first.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+    navigate(`/forgot-password?email=${encodeURIComponent(trimmed)}`);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -184,7 +200,13 @@ const Auth = ({ onLogin }) => {
 
                   {isLogin && (
                     <Box alignSelf="flex-end">
-                      <Link as={RouterLink} to="/forgot-password" fontSize="sm" color="teal.500">
+                      <Link
+                        as="button"
+                        type="button"
+                        fontSize="sm"
+                        color="teal.500"
+                        onClick={handleForgotPassword}
+                      >
                         Forgot password?
                       </Link>
                     </Box>
