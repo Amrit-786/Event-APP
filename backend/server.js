@@ -8,19 +8,34 @@ const { getSupabase } = require('./src/db/supabase');
 const app = express();
 
 const allowedOrigins = (
-  process.env.FRONTEND_URL || 'http://localhost:5173,http://localhost:3000'
+  process.env.FRONTEND_URL ||
+  'http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000'
 )
   .split(',')
-  .map((origin) => origin.trim());
+  .map((origin) => origin.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
+// Always allow common local Vite origins during development
+const localDevOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+];
+const originAllowList = new Set([...allowedOrigins, ...localDevOrigins]);
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      const normalized = origin ? origin.replace(/\/$/, '') : '';
+      // Non-browser clients (no Origin) and allowlisted frontends
+      if (!normalized || originAllowList.has(normalized)) {
         callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+        return;
       }
+      // Reject without throwing — throwing becomes a 500 and breaks the browser
+      console.warn(`CORS blocked origin: ${normalized}`);
+      callback(null, false);
     },
     credentials: true,
   })

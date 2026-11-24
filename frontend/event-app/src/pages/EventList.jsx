@@ -118,7 +118,13 @@ const EventList = () => {
         setEvents(Array.isArray(data) ? data : []);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load events.');
+      const detail =
+        err.response?.data?.message ||
+        err.message ||
+        (err.code === 'ERR_NETWORK'
+          ? 'Network error — is the API awake / CORS allowed?'
+          : '');
+      setError(detail ? `Failed to load events. ${detail}` : 'Failed to load events.');
       setEvents([]);
     } finally {
       setLoading(false);
